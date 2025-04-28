@@ -1,0 +1,25 @@
+body { font-family: Arial, sans-serif; text-align: center; }
+.board {
+  display: grid;
+  grid-template: repeat(10, 30px) / repeat(10, 30px);
+  gap: 2px;
+  margin: 10px auto;
+}
+.cell {
+  width: 30px;
+  height: 30px;
+  background-color: lightblue;
+  border: 1px solid #333;
+}
+.cell.ship { background-color: navy; }
+.cell.hit  { background-color: red; }
+.cell.miss { background-color: gray; }
+.cell.sunk { background-color: black !important; }
+.cell.highlight         { background-color: rgba(0,255,0,0.4); }
+.cell.highlight-invalid { background-color: rgba(255,0,0,0.4); }
+.boards { display: flex; justify-content: center; gap: 40px; }
+/* Запретная зона вокруг потопленного корабля */
+.cell.forbidden {
+  /* жёлтая внутренняя рамка */
+  box-shadow: inset 0 0 0 2px yellow;
+}

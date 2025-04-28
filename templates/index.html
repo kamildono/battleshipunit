@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Морской бой</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <h1>Морской бой</h1>
+
+  <div id="roleSelection">
+    <button id="btnPlayer1" onclick="selectPlayer('player1')">Я Игрок 1</button>
+    <button id="btnPlayer2" onclick="selectPlayer('player2')">Я Игрок 2</button>
+  </div>
+
+  <div id="rules">
+    <h2>Правила игры:</h2>
+    <img src="/static/rules.png" alt="Правила игры" style="max-width:400px; width:100%; height:auto; margin-bottom:10px;">
+    <p>Расставьте свои корабли на поле. Затем стреляйте по клеткам противника, пытаясь потопить все его корабли.
+    Побеждает тот, кто первым уничтожит все корабли соперника!</p>
+  </div>
+
+
+  <div id="gameArea" style="display:none;">
+    <h2 id="status"></h2>
+
+    <div id="shipSelectors" style="display:none; margin-bottom:10px;">
+      <h3>Выберите размер корабля</h3>
+      <button onclick="selectShipSize(4)">4-палубный</button>
+      <button onclick="selectShipSize(3)">3-палубный</button>
+      <button onclick="selectShipSize(2)">2-палубный</button>
+      <button onclick="selectShipSize(1)">1-палубный</button>
+      <button onclick="rotateShip()">Повернуть</button>
+      <button onclick="submitShips()">Готово!</button>
+    </div>
+
+    <div class="boards">
+      <div>
+        <h3>Ваше поле</h3>
+        <div id="ownBoard" class="board"></div>
+      </div>
+      <div>
+        <h3>Поле противника</h3>
+        <div id="opponentBoard" class="board"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/script.js"></script>
+  <script>
+  document.addEventListener('DOMContentLoaded', () => {
+    fetch('/api/status')
+      .then(r => r.json())
+      .then(s => {
+        if (s.player1_taken) document.getElementById('btnPlayer1').style.display = 'none';
+        if (s.player2_taken) document.getElementById('btnPlayer2').style.display = 'none';
+      });
+  });
+  </script>
+</body>
+</html>

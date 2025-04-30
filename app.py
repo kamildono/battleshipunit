@@ -29,9 +29,8 @@ games = {
 }
 
 def reset_game():
-    """Сбросить всё состояние игры и выбора ролей."""
     global games, selected_roles
-    selected_roles = []
+    selected_roles.clear()
     games = {
         'player1': {
             'board': [['' for _ in range(10)] for _ in range(10)],
@@ -46,8 +45,10 @@ def reset_game():
             'turn': False,
             'shots': [],
             'ships': []
-        }
+        },
+        'last_activity': time.time()
     }
+
 
 def get_ship_cells(ship):
     coords = []
@@ -89,9 +90,16 @@ def status():
 def select_role():
     data = request.json
     role = data.get('role')
-    if role in ('player1', 'player2') and role not in selected_roles:
-        selected_roles.append(role)
+
+    if role not in ('player1', 'player2'):
+        return jsonify({'status': 'error', 'message': 'Недопустимая роль'}), 400
+
+    if role in selected_roles:
+        return jsonify({'status': 'error', 'message': f'Роль {role} уже занята'}), 409
+
+    selected_roles.append(role)
     return jsonify({'status': 'ok'})
+
 
 @app.route('/api/get_state/<player>', methods=['GET'])
 def get_state(player):
@@ -186,8 +194,8 @@ def shoot():
 def monitor_inactivity():
     while True:
         time.sleep(60)  # Проверка раз в 60 секунд
-        if time.time() - games.get('last_activity', 0) > 300:  # 300 секунд = 5 минут
-            print('Игра была неактивной 5 минут. Сброс игры.')
+        if time.time() - games.get('last_activity', 0) > 150:  # 300 секунд = 5 минут
+            print('Игра была неактивной 2,5 минут. Сброс игры.')
             reset_game()
 
 # Запустить мониторинг в фоне

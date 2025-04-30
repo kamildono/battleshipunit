@@ -80,17 +80,35 @@ function submitShips() {
 function selectPlayer(p) {
   fetch('/api/select_role', {
     method: 'POST',
-    headers: {'Content-Type': 'application/json'},
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ role: p })
-  }).then(r => r.json()).then(() => {
+  })
+  .then(r => {
+    if (!r.ok) return r.json().then(err => { throw err; });
+    return r.json();
+  })
+  .then(() => {
     player = p;
     document.getElementById('roleSelection').style.display = 'none';
     document.getElementById('gameArea').style.display = 'block';
     document.getElementById('shipSelectors').style.display = 'block';
     drawBoards();
     pollState();
+  })
+  .catch(err => {
+    alert(err.message || 'Ошибка при выборе роли');
   });
 }
+
+window.addEventListener('load', () => {
+  fetch('/api/status')
+    .then(r => r.json())
+    .then(data => {
+      if (data.player1_taken) document.getElementById('btnPlayer1').style.display = 'none';
+      if (data.player2_taken) document.getElementById('btnPlayer2').style.display = 'none';
+    });
+});
+
 
 
 function pollState() {

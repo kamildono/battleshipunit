@@ -1,3 +1,4 @@
+# app.py
 from flask import Flask, render_template, request, jsonify
 from flask_cors import CORS
 from threading import Timer, Thread
@@ -16,14 +17,16 @@ games = {
         'ready': False,
         'turn': True,
         'shots': [],
-        'ships': []
+        'ships': [],
+        'last_ping': time.time()
     },
     'player2': {
         'board': [['' for _ in range(10)] for _ in range(10)],
         'ready': False,
         'turn': False,
         'shots': [],
-        'ships': []
+        'ships': [],
+        'last_ping': time.time()
     },
     'last_activity': time.time()
 }
@@ -37,18 +40,19 @@ def reset_game():
             'ready': False,
             'turn': True,
             'shots': [],
-            'ships': []
+            'ships': [],
+            'last_ping': time.time()
         },
         'player2': {
             'board': [['' for _ in range(10)] for _ in range(10)],
             'ready': False,
             'turn': False,
             'shots': [],
-            'ships': []
+            'ships': [],
+            'last_ping': time.time()
         },
         'last_activity': time.time()
     }
-
 
 def get_ship_cells(ship):
     coords = []
@@ -62,13 +66,12 @@ def get_ship_cells(ship):
 def update_sunk_ships(player):
     board = games[player]['board']
     for ship in games[player]['ships']:
-        if ship.get('sunk'):
-            continue
+        if ship.get('sunk'): continue
         cells = get_ship_cells(ship)
         if all(board[cy][cx] == 'X' for cx, cy in cells):
             ship['sunk'] = True
             for cx, cy in cells:
-                board[cy][cx] = 'B'  # черная клетка потопленного
+                board[cy][cx] = 'B'
 
 def all_ships_sunk(player):
     ships = games[player]['ships']
@@ -80,7 +83,6 @@ def index():
 
 @app.route('/api/status', methods=['GET'])
 def status():
-    """Кто уже выбрал свою роль?"""
     return jsonify({
         'player1_taken': 'player1' in selected_roles,
         'player2_taken': 'player2' in selected_roles
@@ -90,22 +92,20 @@ def status():
 def select_role():
     data = request.json
     role = data.get('role')
-
     if role not in ('player1', 'player2'):
         return jsonify({'status': 'error', 'message': 'Недопустимая роль'}), 400
-
     if role in selected_roles:
         return jsonify({'status': 'error', 'message': f'Роль {role} уже занята'}), 409
-
     selected_roles.append(role)
+    games[role]['last_ping'] = time.time()
     return jsonify({'status': 'ok'})
-
 
 @app.route('/api/get_state/<player>', methods=['GET'])
 def get_state(player):
     opponent = 'player2' if player == 'player1' else 'player1'
+    now = time.time()
+    opponent_online = (now - games[opponent]['last_ping']) < 30
 
-    # Собираем потопленные корабли противника
     sunk_ships = []
     for ship in games[opponent]['ships']:
         if ship.get('sunk'):
@@ -122,7 +122,8 @@ def get_state(player):
         'opponent_ready': games[opponent]['ready'],
         'your_turn': games[player]['turn'],
         'sunk_ships': sunk_ships,
-        'selected_roles': selected_roles
+        'selected_roles': selected_roles,
+        'opponent_online': opponent_online
     })
 
 @app.route('/api/place_ship', methods=['POST'])
@@ -130,9 +131,9 @@ def place_ship():
     games['last_activity'] = time.time()
     data = request.json
     player = data['player']
+    games[player]['last_ping'] = time.time()
     ships = data['ships']
     games[player]['ships'] = ships
-    # Рисуем доску
     board = [['' for _ in range(10)] for _ in range(10)]
     for ship in ships:
         x, y, size, ori = ship['x'], ship['y'], ship['size'], ship['orientation']
@@ -143,7 +144,6 @@ def place_ship():
                 board[y + i][x] = 'S'
     games[player]['board'] = board
     games[player]['ready'] = True
-
     return jsonify({'status': 'ok'})
 
 @app.route('/api/shoot', methods=['POST'])
@@ -151,6 +151,7 @@ def shoot():
     games['last_activity'] = time.time()
     data = request.json
     player = data['player']
+    games[player]['last_ping'] = time.time()
     x, y = data['x'], data['y']
     opponent = 'player2' if player == 'player1' else 'player1'
 
@@ -162,10 +163,8 @@ def shoot():
         games[opponent]['board'][y][x] = 'O'
 
     games[player]['shots'].append({'x': x, 'y': y, 'hit': hit})
-
     update_sunk_ships(opponent)
 
-    # Определяем, потоплен ли корабль этим выстрелом
     sunk = False
     sunk_cells = []
     for ship in games[opponent]['ships']:
@@ -191,14 +190,33 @@ def shoot():
         'victory': victory
     })
 
+@app.route('/api/heartbeat', methods=['POST'])
+def heartbeat():
+    data = request.json
+    player = data.get('player')
+    if player in ('player1', 'player2'):
+        games[player]['last_ping'] = time.time()
+        return jsonify({'status': 'ok'})
+    return jsonify({'status': 'error'}), 400
+
+@app.route('/api/reset', methods=['POST'])
+def reset_endpoint():
+    data = request.json
+    player = data.get('player')
+    if player not in ('player1', 'player2'):
+        return jsonify({'status': 'error', 'message': 'Invalid player'}), 400
+    opponent = 'player2' if player == 'player1' else 'player1'
+    if time.time() - games[opponent]['last_ping'] > 15:
+        reset_game()
+        return jsonify({'status': 'ok', 'message': 'Game reset'})
+    return jsonify({'status': 'error', 'message': 'Opponent still online'}), 403
+
 def monitor_inactivity():
     while True:
-        time.sleep(60)  # Проверка раз в 60 секунд
-        if time.time() - games.get('last_activity', 0) > 150:  # 300 секунд = 5 минут
-            print('Игра была неактивной 2,5 минут. Сброс игры.')
+        time.sleep(60)
+        if time.time() - games.get('last_activity', 0) > 120:
             reset_game()
 
-# Запустить мониторинг в фоне
 Thread(target=monitor_inactivity, daemon=True).start()
 
 if __name__ == '__main__':

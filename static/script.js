@@ -127,7 +127,6 @@ function pollState() {
         if(gameStarted) document.getElementById('shipSelectors').style.display='none';
         updateShots(data);
 
-        // Кнопка перезапуска
         const btn = document.getElementById('btnRestart');
         if(!data.opponent_online && data.ready && !data.victory) {
           btn.style.display='inline-block';
@@ -156,7 +155,6 @@ document.getElementById('btnRestart').addEventListener('click',()=>{
 });
 
 function resetClientGame() {
-  // Сброс внутреннего состояния
   player = '';
   ships = [];
   orientation = 'horizontal';
@@ -170,16 +168,13 @@ function resetClientGame() {
   placingSize = 4;
   hoveredCells = [];
 
-  // Показываем/прячем нужные панели
   document.getElementById('roleSelection').style.display    = 'block';
   document.getElementById('gameArea').style.display         = 'none';
   document.getElementById('shipSelectors').style.display    = 'none';
 
-  // Снова показываем обе кнопки выбора игрока
   document.getElementById('btnPlayer1').style.display = 'inline-block';
   document.getElementById('btnPlayer2').style.display = 'inline-block';
 
-  // Рисуем пустые доски
   drawBoards();
 }
 
@@ -188,7 +183,6 @@ function updateShots(data) {
     const ownBoard = document.getElementById('ownBoard').children;
     const opponentBoard = document.getElementById('opponentBoard').children;
 
-    // Очистка классов перед новой отрисовкой
     for (let cell of ownBoard) {
         cell.classList.remove('hit', 'miss', 'sunk', 'forbidden');
     }
@@ -196,7 +190,6 @@ function updateShots(data) {
         cell.classList.remove('hit', 'miss', 'sunk', 'forbidden');
     }
 
-    // Отмечаем выстрелы противника по нашему полю
     data.opponent_shots.forEach(shot => {
         const idx = shot.y * 10 + shot.x;
         if (opponentBoard[idx]) {
@@ -204,7 +197,6 @@ function updateShots(data) {
         }
     });
 
-    // Отмечаем наши выстрелы по полю противника
     data.own_shots.forEach(shot => {
         const idx = shot.y * 10 + shot.x;
         if (ownBoard[idx]) {
@@ -212,10 +204,8 @@ function updateShots(data) {
         }
     });
 
-    // Отмечаем потопленные корабли на поле противника
     if (data.sunk_ships) {
         data.sunk_ships.forEach(shipCoords => {
-            // Потопленные клетки
             shipCoords.forEach(({x, y}) => {
                 const idx = y * 10 + x;
                 if (opponentBoard[idx]) {
@@ -224,7 +214,6 @@ function updateShots(data) {
                 }
             });
 
-            // Жёлтая рамка вокруг потопленного корабля
             const xs = shipCoords.map(c => c.x);
             const ys = shipCoords.map(c => c.y);
             const minX = Math.min(...xs);

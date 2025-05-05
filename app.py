@@ -7,10 +7,8 @@ import time
 app = Flask(__name__)
 CORS(app)
 
-# Список уже занятых ролей (player1/player2)
 selected_roles = []
 
-# Игровые состояния
 games = {
     'player1': {
         'board': [['' for _ in range(10)] for _ in range(10)],
